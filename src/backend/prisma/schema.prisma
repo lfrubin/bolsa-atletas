@@ -1,0 +1,74 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  INVESTOR
+  CLUB
+  ADMIN
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  IPO_RESERVATION
+  IPO_REFUND
+  TRADE_BUY
+  TRADE_SELL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  document      String    @unique // CPF ou CNPJ
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(INVESTOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  wallet        Wallet?
+  
+  @@map("users")
+}
+
+model Wallet {
+  id               String              @id @default(uuid())
+  userId           String              @unique
+  availableBalance Decimal             @default(0.00) @db.Decimal(18, 4)
+  reservedBalance  Decimal             @default(0.00) @db.Decimal(18, 4)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     LedgerTransaction[]
+
+  @@map("wallets")
+}
+
+model LedgerTransaction {
+  id          String            @id @default(uuid())
+  walletId    String
+  type        TransactionType
+  amount      Decimal           @db.Decimal(18, 4)
+  fee         Decimal           @default(0.00) @db.Decimal(18, 4)
+  status      TransactionStatus @default(PENDING)
+  description String?
+  referenceId String?
+  createdAt   DateTime          @default(now())
+
+  wallet      Wallet            @relation(fields: [walletId], references: [id])
+
+  @@map("ledger_transactions")
+}
