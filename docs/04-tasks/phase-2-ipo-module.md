@@ -10,14 +10,14 @@ Implementar o cadastro e gestão de atletas por clubes, o lançamento de ofertas
 ### 1. Estrutura de Dados e Endpoints de Gestão
 - [x] Atualização dos modelos `Athlete`, `IpoOffer` e `IpoReservation` no Prisma Schema.
 - [x] Execução da migration `add_ipo_and_athletes` no PostgreSQL.
-- [ ] Endpoint de cadastro de atletas (`POST /api/v1/athletes`) para perfis `CLUB` e `ADMIN`.
-- [ ] Endpoint de criação de oferta de IPO (`POST /api/v1/ipo/offers`) com validações de Soft Cap, Hard Cap e datas de captação.
+- [x] Endpoint de cadastro de atletas (`POST /api/v1/athletes`) para perfis `CLUB` e `ADMIN`.
+- [x] Endpoint de criação de oferta de IPO (`POST /api/v1/ipo/offers`) com validações de Soft Cap, Hard Cap e datas de captação.
 
 ### 2. Fluxo de Reserva de Ações (Investidor)
-- [ ] Endpoint de reserva de ações (`POST /api/v1/ipo/reserve`).
-- [ ] Trava com bloqueio pessimista (`FOR UPDATE`) no IPO para impedir overbooking de ações.
-- [ ] Transferência atômica de valor do `availableBalance` para `reservedBalance` na carteira do investidor.
-- [ ] Emissão de registro no `LedgerTransaction` com o identificador da reserva.
+- [x] Endpoint de reserva de ações (`POST /api/v1/ipo/reserve`).
+- [x] Trava com bloqueio pessimista (`FOR UPDATE`) no IPO para impedir overbooking de ações.
+- [x] Transferência atômica de valor do `availableBalance` para `reservedBalance` na carteira do investidor.
+- [x] Emissão de registro no `LedgerTransaction` com o identificador da reserva.
 
 ### 3. Engine de Liquidação e Reembolso do IPO
 - [ ] Rotina/Worker de processamento para ofertas atingindo o prazo final (`endDate`).

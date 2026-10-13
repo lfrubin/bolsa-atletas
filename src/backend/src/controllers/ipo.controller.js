@@ -2,7 +2,6 @@ import { prisma } from '../lib/prisma.js';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
-// Cadastrar novo atleta (Apenas CLUB ou ADMIN)
 export async function createAthlete(req, res) {
   const schema = z.object({
     name: z.string().min(2),
@@ -15,14 +14,18 @@ export async function createAthlete(req, res) {
   const { name, position } = parsed.data;
   const clubId = req.user.id;
 
-  const athlete = await prisma.athlete.create({
-    data: { name, position, clubId }
-  });
+  try {
+    const athlete = await prisma.athlete.create({
+      data: { name, position, clubId }
+    });
 
-  return res.status(201).json(athlete);
+    return res.status(201).json(athlete);
+  } catch (error) {
+    console.error('Erro ao cadastrar atleta:', error);
+    return res.status(500).json({ error: 'Erro ao cadastrar atleta' });
+  }
 }
 
-// Criar oferta de IPO para um atleta (Apenas CLUB ou ADMIN)
 export async function createIpoOffer(req, res) {
   const schema = z.object({
     athleteId: z.string().uuid(),
@@ -40,26 +43,39 @@ export async function createIpoOffer(req, res) {
   const data = parsed.data;
 
   if (data.softCapShares > data.hardCapShares || data.hardCapShares > data.totalShares) {
-    return res.status(400).json({ error: 'Inconsistência nos valores de Soft Cap, Hard Cap ou Total de Ações' });
+    return res.status(400).json({ 
+      error: 'Inconsistência nos valores: Soft Cap deve ser menor ou igual ao Hard Cap, e Hard Cap deve ser menor ou igual ao Total de Ações.' 
+    });
   }
 
-  const ipo = await prisma.ipoOffer.create({
-    data: {
-      athleteId: data.athleteId,
-      sharePrice: new Prisma.Decimal(data.sharePrice.toFixed(4)),
-      totalShares: data.totalShares,
-      softCapShares: data.softCapShares,
-      hardCapShares: data.hardCapShares,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
-      status: 'ACTIVE'
-    }
-  });
+  const startDate = new Date(data.startDate);
+  const endDate = new Date(data.endDate);
 
-  return res.status(201).json(ipo);
+  if (endDate <= startDate) {
+    return res.status(400).json({ error: 'A data final deve ser posterior à data inicial da oferta.' });
+  }
+
+  try {
+    const ipo = await prisma.ipoOffer.create({
+      data: {
+        athleteId: data.athleteId,
+        sharePrice: new Prisma.Decimal(data.sharePrice.toFixed(4)),
+        totalShares: data.totalShares,
+        softCapShares: data.softCapShares,
+        hardCapShares: data.hardCapShares,
+        startDate,
+        endDate,
+        status: 'ACTIVE'
+      }
+    });
+
+    return res.status(201).json(ipo);
+  } catch (error) {
+    console.error('Erro ao criar oferta de IPO:', error);
+    return res.status(500).json({ error: 'Erro ao criar oferta de IPO' });
+  }
 }
 
-// Reserva de Ações no IPO (Investidor)
 export async function reserveIpoShares(req, res) {
   const schema = z.object({
     ipoOfferId: z.string().uuid(),
@@ -74,9 +90,11 @@ export async function reserveIpoShares(req, res) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Bloqueio pessimista na oferta de IPO para evitar overbooking
       const [ipo] = await tx.$queryRaw`
-        SELECT * FROM ipo_offers WHERE id = ${ipoOfferId} FOR UPDATE
+        SELECT id, "sharePrice", "totalShares", "softCapShares", "hardCapShares", "soldShares", "startDate", "endDate", status
+        FROM ipo_offers
+        WHERE id = ${ipoOfferId}
+        FOR UPDATE
       `;
 
       if (!ipo || ipo.status !== 'ACTIVE') {
@@ -96,17 +114,20 @@ export async function reserveIpoShares(req, res) {
       const sharePrice = new Prisma.Decimal(ipo.sharePrice);
       const totalAmount = sharePrice.mul(sharesCount);
 
-      // Bloqueio pessimista na carteira do investidor
       const [wallet] = await tx.$queryRaw`
-        SELECT id, "availableBalance" FROM wallets WHERE "userId" = ${userId} FOR UPDATE
+        SELECT id, "availableBalance", "reservedBalance"
+        FROM wallets
+        WHERE "userId" = ${userId}
+        FOR UPDATE
       `;
+
+      if (!wallet) throw new Error('WALLET_NOT_FOUND');
 
       const availableBalance = new Prisma.Decimal(wallet.availableBalance);
       if (availableBalance.lessThan(totalAmount)) {
         throw new Error('INSUFFICIENT_FUNDS');
       }
 
-      // 1. Mover saldo de disponível para reservado
       await tx.wallet.update({
         where: { id: wallet.id },
         data: {
@@ -115,13 +136,11 @@ export async function reserveIpoShares(req, res) {
         }
       });
 
-      // 2. Incrementar contagem de ações vendidas
       await tx.ipoOffer.update({
         where: { id: ipoOfferId },
         data: { soldShares: { increment: sharesCount } }
       });
 
-      // 3. Registrar transação no Ledger
       await tx.ledgerTransaction.create({
         data: {
           walletId: wallet.id,
@@ -129,11 +148,10 @@ export async function reserveIpoShares(req, res) {
           amount: totalAmount,
           fee: 0.00,
           status: 'COMPLETED',
-          description: `Reserva de ${sharesCount} ações na oferta ${ipoOfferId}`
+          description: `Reserva de ${sharesCount} ações no IPO ${ipoOfferId}`
         }
       });
 
-      // 4. Criar registro de reserva
       const reservation = await tx.ipoReservation.create({
         data: {
           ipoOfferId,
@@ -149,12 +167,13 @@ export async function reserveIpoShares(req, res) {
 
     return res.status(201).json(result);
   } catch (error) {
-    if (error.message === 'IPO_NOT_ACTIVE') return res.status(400).json({ error: 'Oferta de IPO não está ativa' });
-    if (error.message === 'IPO_OUT_OF_SCHEDULE') return res.status(400).json({ error: 'Oferta de IPO fora do período de captação' });
-    if (error.message === 'EXCEEDS_HARD_CAP') return res.status(400).json({ error: 'A quantidade solicitada excede o limite disponível (Hard Cap)' });
-    if (error.message === 'INSUFFICIENT_FUNDS') return res.status(400).json({ error: 'Saldo disponível insuficiente na carteira' });
+    if (error.message === 'IPO_NOT_ACTIVE') return res.status(400).json({ error: 'A oferta de IPO não está ativa.' });
+    if (error.message === 'IPO_OUT_OF_SCHEDULE') return res.status(400).json({ error: 'A oferta de IPO está fora do período de captação.' });
+    if (error.message === 'EXCEEDS_HARD_CAP') return res.status(400).json({ error: 'A quantidade de ações solicitada excede o Hard Cap disponível.' });
+    if (error.message === 'INSUFFICIENT_FUNDS') return res.status(400).json({ error: 'Saldo disponível insuficiente para realizar a reserva.' });
+    if (error.message === 'WALLET_NOT_FOUND') return res.status(404).json({ error: 'Carteira do usuário não encontrada.' });
 
-    console.error('Erro ao reservar ações de IPO:', error);
-    return res.status(500).json({ error: 'Erro ao processar reserva no IPO' });
+    console.error('Erro ao processar reserva de IPO:', error);
+    return res.status(500).json({ error: 'Erro interno ao processar reserva de IPO.' });
   }
 }

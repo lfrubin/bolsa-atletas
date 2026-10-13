@@ -12,15 +12,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Autenticação
+// Autenticação e Usuários
 app.post('/api/v1/auth/register', register);
 app.post('/api/v1/auth/login', login);
 
-// Carteiras / Financeiro
+// Módulo Financeiro (Carteiras / PIX)
 app.post('/api/v1/wallets/deposit/pix', authMiddleware(), depositPixSimulation);
 app.post('/api/v1/wallets/withdraw/pix', authMiddleware(), withdrawPix);
 
-// Atletas e Mercado Primário (IPO)
+// Módulo de IPO / Mercado Primário
 app.post('/api/v1/athletes', authMiddleware(['CLUB', 'ADMIN']), createAthlete);
 app.post('/api/v1/ipo/offers', authMiddleware(['CLUB', 'ADMIN']), createIpoOffer);
 app.post('/api/v1/ipo/reserve', authMiddleware(['INVESTOR']), reserveIpoShares);
