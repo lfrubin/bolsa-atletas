@@ -20,11 +20,11 @@ Implementar o cadastro e gestão de atletas por clubes, o lançamento de ofertas
 - [x] Emissão de registro no `LedgerTransaction` com o identificador da reserva.
 
 ### 3. Engine de Liquidação e Reembolso do IPO
-- [ ] Rotina/Worker de processamento para ofertas atingindo o prazo final (`endDate`).
+- [ ] Serviço/Endpoint de encerramento e liquidação de ofertas (`POST /api/v1/ipo/offers/:id/settle`).
 - [ ] **Cenário de Sucesso (Soft Cap Atingido):**
-  - Debitar `reservedBalance` dos investidores.
-  - Creditar valor arrecadado na carteira do Clube emissor com desconto da taxa de 5% da plataforma.
-  - Atualizar status do IPO para `SUCCESSFUL`.
+  - Debitar `reservedBalance` de todos os investidores participantes.
+  - Creditar valor total arrecadado na carteira do Clube emissor com desconto da taxa de 5% da plataforma.
+  - Atualizar status da oferta para `SUCCESSFUL` e das reservas para `CONFIRMED`.
 - [ ] **Cenário de Falha (Soft Cap Não Atingido):**
-  - Devolver integralmente o `reservedBalance` para o `availableBalance` dos investidores sem cobrança de taxas.
-  - Atualizar status do IPO para `FAILED`.
+  - Devolver integralmente o `reservedBalance` para o `availableBalance` de todos os investidores participantes.
+  - Atualizar status da oferta para `FAILED` e das reservas para `REFUNDED`.
