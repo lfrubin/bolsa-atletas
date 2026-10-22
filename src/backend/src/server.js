@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { register, login } from './controllers/auth.controller.js';
-import { depositPixSimulation, withdrawPix } from './controllers/wallet.controller.js';
-import { createAthlete, createIpoOffer, reserveIpoShares } from './controllers/ipo.controller.js';
+import { depositPixSimulation, withdrawPix, getWallet } from './controllers/wallet.controller.js';
+import { createAthlete, createIpoOffer, reserveIpoShares, settleIpoOffer } from './controllers/ipo.controller.js';
 import { authMiddleware } from './middlewares/auth.middleware.js';
 
 dotenv.config();
@@ -17,6 +17,7 @@ app.post('/api/v1/auth/register', register);
 app.post('/api/v1/auth/login', login);
 
 // Módulo Financeiro (Carteiras / PIX)
+app.get('/api/v1/wallets/me', authMiddleware(), getWallet);
 app.post('/api/v1/wallets/deposit/pix', authMiddleware(), depositPixSimulation);
 app.post('/api/v1/wallets/withdraw/pix', authMiddleware(), withdrawPix);
 
@@ -24,6 +25,7 @@ app.post('/api/v1/wallets/withdraw/pix', authMiddleware(), withdrawPix);
 app.post('/api/v1/athletes', authMiddleware(['CLUB', 'ADMIN']), createAthlete);
 app.post('/api/v1/ipo/offers', authMiddleware(['CLUB', 'ADMIN']), createIpoOffer);
 app.post('/api/v1/ipo/reserve', authMiddleware(['INVESTOR']), reserveIpoShares);
+app.post('/api/v1/ipo/offers/:id/settle', authMiddleware(['CLUB', 'ADMIN']), settleIpoOffer);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

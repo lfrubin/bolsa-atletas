@@ -112,3 +112,28 @@ export async function withdrawPix(req, res) {
     return res.status(500).json({ error: 'Erro ao processar saque PIX' });
   }
 }
+// Consultar saldo e últimas transações da carteira do utilizador autenticado
+export async function getWallet(req, res) {
+  const userId = req.user.id;
+
+  try {
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId },
+      include: {
+        transactions: {
+          take: 10,
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!wallet) {
+      return res.status(404).json({ error: 'Carteira não encontrada.' });
+    }
+
+    return res.status(200).json(wallet);
+  } catch (error) {
+    console.error('Erro ao buscar carteira:', error);
+    return res.status(500).json({ error: 'Erro interno ao consultar carteira.' });
+  }
+}

@@ -1,8 +1,8 @@
 # Contexto Ativo do Projeto - Bolsa de Atletas
 
 ## 1. Status do Projeto
-- **Fase Atual:** Fase 2 - Mercado Primário (IPO) [Em andamento - Módulo de Liquidação Pendente]
-- **Fase Anterior:** Fase 1 - Fundação e Módulo Financeiro (**100% Concluída e Validada**)
+- **Fase Atual:** Fase 3 - Mercado Secundário (Trading / Order Book)
+- **Fase Anterior:** Fase 2 - Mercado Primário (IPO) (**100% Concluída e Validada**)
 - **Stack:** Node.js (ES Modules / JS), Express, Prisma ORM, PostgreSQL 16, Redis 7, Docker.
 
 ---
@@ -18,8 +18,8 @@
 - [x] Controle de concorrência financeira com bloqueio pessimista (`FOR UPDATE`) em SQL nativo no Prisma.
 - [x] Suíte de testes unitários e de integração configurada e aprovada.
 
-### Fase 2: Mercado Primário - IPO (EM ANDAMENTO)
+### Fase 2: Mercado Primário - IPO (CONCLUÍDA)
 - [x] Schemas Prisma de Atletas (`Athlete`), Ofertas (`IpoOffer`) e Reservas (`IpoReservation`) migrados para o banco.
 - [x] Endpoints de gestão de atletas (`POST /api/v1/athletes`) e criação de ofertas públicas (`POST /api/v1/ipo/offers`).
 - [x] Endpoint de reserva de ações (`POST /api/v1/ipo/reserve`) com trava pessimista em ofertas/carteiras e movimentação para `reservedBalance`.
-- [ ] Serviço de liquidação do IPO: liquidação financeira (Soft Cap / Hard Cap), repasse ao clube com taxa de 5% ou reembolso integral aos investidores.
+- [x] Engine de liquidação de IPO (`POST /api/v1/ipo/offers/:id/settle`) com verificação de Soft Cap, cobrança de taxa de 5% para a plataforma, repasse ao clube e estorno de saldos em caso de não atingimento da meta.
