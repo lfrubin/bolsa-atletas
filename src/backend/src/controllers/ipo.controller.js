@@ -235,6 +235,30 @@ export async function settleIpoOffer(req, res) {
               description: `Confirmação de aquisição de ações no IPO ${id}`
             }
           });
+
+          await tx.ipoReservation.update({
+            where: { id: reservation.id },
+            data: { status: 'CONFIRMED' }
+          });
+
+          // Creditar ações na custódia do investidor (UserAsset)
+          await tx.userAsset.upsert({
+            where: {
+              userId_athleteId: {
+                userId: reservation.userId,
+                athleteId: ipo.athleteId
+              }
+            },
+            update: {
+              totalShares: { increment: reservation.sharesCount }
+            },
+            create: {
+              userId: reservation.userId,
+              athleteId: ipo.athleteId,
+              totalShares: reservation.sharesCount,
+              blockedShares: 0
+            }
+          });
         }
 
         // Taxa da plataforma de 5% e valor líquido do Clube

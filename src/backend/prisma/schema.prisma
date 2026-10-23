@@ -42,6 +42,18 @@ enum ReservationStatus {
   REFUNDED
 }
 
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+}
+
 model User {
   id              String           @id @default(uuid())
   name            String
@@ -55,6 +67,8 @@ model User {
   wallet          Wallet?
   athletes        Athlete[]        @relation("ClubAthletes")
   ipoReservations IpoReservation[]
+  assets          UserAsset[]
+  orders          Order[]
 
   @@map("users")
 }
@@ -99,6 +113,9 @@ model Athlete {
 
   club        User       @relation("ClubAthletes", fields: [clubId], references: [id])
   ipoOffers   IpoOffer[]
+  userAssets  UserAsset[]
+  orders      Order[]
+  trades      Trade[]
 
   @@map("athletes")
 }
@@ -136,4 +153,60 @@ model IpoReservation {
   user        User              @relation(fields: [userId], references: [id])
 
   @@map("ipo_reservations")
+}
+
+// Custódia de Posições do Investidor
+model UserAsset {
+  id            String   @id @default(uuid())
+  userId        String
+  athleteId     String
+  totalShares   Int      @default(0)
+  blockedShares Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  athlete       Athlete  @relation(fields: [athleteId], references: [id])
+
+  @@unique([userId, athleteId])
+  @@map("user_assets")
+}
+
+// Ordens de Compra e Venda
+model Order {
+  id              String      @id @default(uuid())
+  userId          String
+  athleteId       String
+  side            OrderSide
+  price           Decimal     @db.Decimal(18, 4)
+  totalShares     Int
+  remainingShares Int
+  status          OrderStatus @default(OPEN)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id])
+  athlete         Athlete     @relation(fields: [athleteId], references: [id])
+  buyTrades       Trade[]     @relation("BuyOrder")
+  sellTrades      Trade[]     @relation("SellOrder")
+
+  @@map("orders")
+}
+
+// Negociações Executadas (Trades)
+model Trade {
+  id          String   @id @default(uuid())
+  buyOrderId  String
+  sellOrderId String
+  athleteId   String
+  sharesCount Int
+  price       Decimal  @db.Decimal(18, 4)
+  totalAmount Decimal  @db.Decimal(18, 4)
+  createdAt   DateTime @default(now())
+
+  buyOrder    Order    @relation("BuyOrder", fields: [buyOrderId], references: [id])
+  sellOrder   Order    @relation("SellOrder", fields: [sellOrderId], references: [id])
+  athlete     Athlete  @relation(fields: [athleteId], references: [id])
+
+  @@map("trades")
 }
