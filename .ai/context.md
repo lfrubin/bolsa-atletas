@@ -1,7 +1,7 @@
 # Contexto Ativo do Projeto - Bolsa de Atletas
 
 ## 1. Status do Projeto
-- **Fase Atual:** Fase 3 - Mercado Secundário e Pregão Real-Time [Em andamento - Orderbook e Matching Engine]
+- **Fase Atual:** Fase 3 - Mercado Secundário e Pregão Real-Time [Em andamento - WebSockets e Circuit Breaker]
 - **Fase Anterior:** Fase 2 - Mercado Primário (IPO) (**100% Concluída e Validada**)
 - **Stack:** Node.js (ES Modules / JS), Express, Prisma ORM, PostgreSQL 16, Redis 7, Docker.
 
@@ -27,5 +27,6 @@
 - [x] Modelagem de Custódia (`UserAsset`), Ordens (`Order`) e Negociações (`Trade`) migrada no PostgreSQL (`20261023125741_add_trading_and_assets`).
 - [x] Integração da liquidação do IPO com a carteira de custódia (`UserAsset`).
 - [x] Endpoint de consulta de custódia e posições (`GET /api/v1/assets/me`).
-- [ ] Endpoints de emissão e cancelamento de ordens de Compra/Venda.
-- [ ] Matching Engine em memória com execução integral e cobrança de 1% de taxa por ponta.
+- [x] Endpoints de emissão e cancelamento de ordens (`BUY`/`SELL`).
+- [x] Matching Engine síncrono/assíncrono com trava de concorrência, execução 100% integral e lançamento no Ledger com enums `TRADE_BUY` e `TRADE_SELL`.
+- [ ] Transmissão de eventos em tempo real via WebSockets (Redis Pub/Sub) e trava administrativa de mercado (Circuit Breaker).
