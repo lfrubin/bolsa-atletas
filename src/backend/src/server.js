@@ -6,6 +6,7 @@ import { depositPixSimulation, withdrawPix, getWallet } from './controllers/wall
 import { createAthlete, createIpoOffer, reserveIpoShares, settleIpoOffer } from './controllers/ipo.controller.js';
 import { authMiddleware } from './middlewares/auth.middleware.js';
 import { getMyAssets } from './controllers/asset.controller.js';
+import { createBuyOrder, createSellOrder, cancelOrder, getOrderBook } from './controllers/order.controller.js';
 
 dotenv.config();
 
@@ -30,6 +31,12 @@ app.post('/api/v1/ipo/offers/:id/settle', authMiddleware(['CLUB', 'ADMIN']), set
 
 // Módulo de Custódia e Ativos
 app.get('/api/v1/assets/me', authMiddleware(), getMyAssets);
+
+// Módulo de Mercado Secundário / Order Book
+app.post('/api/v1/orders/buy', authMiddleware(['INVESTOR']), createBuyOrder);
+app.post('/api/v1/orders/sell', authMiddleware(['INVESTOR']), createSellOrder);
+app.post('/api/v1/orders/:id/cancel', authMiddleware(['INVESTOR']), cancelOrder);
+app.get('/api/v1/orders/book/:athleteId', getOrderBook);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
